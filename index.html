@@ -456,6 +456,117 @@
       opacity: 1;
     }
 
+
+      /* 防止长域名、邮箱和按钮在窄屏下撑破布局 */
+      html {
+        overflow-x: hidden;
+      }
+
+      img, svg {
+        max-width: 100%;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .btn {
+        min-height: 44px;
+      }
+
+      .hero-actions,
+      .domain-card-actions {
+        flex-wrap: wrap;
+      }
+
+      .domain-card-name,
+      .tg-card-link,
+      .email-addr {
+        overflow-wrap: anywhere;
+      }
+
+      .btn:focus-visible,
+      a:focus-visible {
+        outline: 3px solid rgba(2, 132, 199, 0.45);
+        outline-offset: 3px;
+      }
+
+      .btn:disabled {
+        cursor: default;
+        opacity: 0.75;
+      }
+
+      @media (max-width: 480px) {
+        body {
+          padding: 16px 10px;
+          font-size: 16px;
+        }
+
+        .container {
+          width: 100%;
+        }
+
+        .top-notice,
+        .tutorial-banner,
+        .section-box,
+        .hero-card {
+          padding: 20px;
+        }
+
+        .brand-title {
+          font-size: 32px;
+          line-height: 1.2;
+        }
+
+        .hero-url {
+          font-size: 21px;
+        }
+
+        .hero-actions {
+          width: 100%;
+        }
+
+        .hero-actions .btn {
+          flex: 1 1 0;
+        }
+
+        .jump-bar {
+          padding: 16px;
+        }
+
+        .jump-bar > div {
+          width: 100%;
+        }
+
+        .jump-bar .btn {
+          flex: 1;
+        }
+
+        .domain-card {
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .domain-card-actions {
+          flex-shrink: 0;
+        }
+
+        .email-addr {
+          font-size: 18px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          scroll-behavior: auto !important;
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+
     /* 移动端自适应 */
     @media (max-width: 768px) {
       body {
@@ -674,52 +785,71 @@
   <div id="toast" class="toast">地址已复制</div>
 
   <script>
-    function copyText(text, btnElement) {
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(function() {
-          handleSuccess(btnElement);
-        }).catch(function() {
-          fallbackCopy(text, btnElement);
-        });
-      } else {
-        fallbackCopy(text, btnElement);
+    "use strict";
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      if (!toast) return;
+
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1800);
+    }
+
+    async function copyText(text, btnElement) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          fallbackCopy(text);
+        }
+
+        handleSuccess(btnElement);
+      } catch (error) {
+        showToast("复制失败，请手动复制");
       }
     }
 
-    function fallbackCopy(text, btnElement) {
-      var textArea = document.createElement("textarea");
+    function fallbackCopy(text) {
+      const textArea = document.createElement("textarea");
+
       textArea.value = text;
+      textArea.setAttribute("readonly", "");
       textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
       textArea.style.opacity = "0";
+
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
-      try {
-        document.execCommand('copy');
-        handleSuccess(btnElement);
-      } catch (err) {
-        showToast("复制失败，请手动选择复制");
-      }
+      textArea.setSelectionRange(0, textArea.value.length);
+
+      const copied = document.execCommand("copy");
       document.body.removeChild(textArea);
+
+      if (!copied) {
+        throw new Error("Clipboard fallback failed");
+      }
     }
 
     function handleSuccess(btnElement) {
       showToast("已成功复制到剪贴板");
-      if (btnElement) {
-        var originalText = btnElement.innerText;
-        btnElement.innerText = "已复制";
-        setTimeout(function() {
-          btnElement.innerText = originalText;
-        }, 1500);
-      }
-    }
 
-    function showToast(message) {
-      var toast = document.getElementById("toast");
-      toast.innerText = message;
-      toast.classList.add("show");
-      setTimeout(function() {
-        toast.classList.remove("show");
+      if (!btnElement) return;
+
+      const originalText = btnElement.textContent;
+      btnElement.textContent = "已复制";
+      btnElement.disabled = true;
+
+      clearTimeout(btnElement.__copyTimer);
+      btnElement.__copyTimer = setTimeout(() => {
+        btnElement.textContent = originalText;
+        btnElement.disabled = false;
       }, 1500);
     }
   </script>
